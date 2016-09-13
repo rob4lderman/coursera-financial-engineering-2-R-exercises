@@ -1,6 +1,9 @@
 
 # Coursera: Financial Engineering II: In-class Exercises in R
 
+* [Lesson 1.1: Mean Variance Overview](#Lesson-1.1:-Mean-Variance-Overview)
+* [Lesson 1.3 Sharpe Optimal Portfolio and the Risk-Free Frontier](#Lesson-1.3-Sharpe-Optimal-Portfolio-and-the-Risk-Free-Frontier)
+
 ```{r}
 
     options(width=100)
@@ -8,7 +11,7 @@
 ```
 
 <br /><br />
-## Lesson 1.1: Mean Variance Overview
+## <a name="Lesson-1.1:-Mean-Variance-Overview"></a>Lesson 1.1: Mean Variance Overview
 
 
 ```{r}
@@ -64,20 +67,17 @@
     x.vec <- c(0.794, 1.424, -1.44, 0.892, 1.03, -0.95, 0.95, -1.70)
     names(x.vec) <- asset.names
 
-    #
-    # weights should sum to 1
-    #
-    sum(x.vec)
 
     #
     # Portfolio mean and variance
     # Note: slightly different than in-class example due to precision
     #
     mu.p <- t(x.vec) %*% mu.vec
-    mu.p
-
     sigma.p <- sqrt( t(x.vec) %*% Sigma.mat %*% x.vec )
-    sigma.p
+
+    rbind(sum=sum(x.vec),   # weights should sum to 1
+          mu=mu.p[1], 
+          sigma=sigma.p[1])
 
 ```
 
@@ -97,12 +97,7 @@
                          x.vec[d] <- 1 - sum(x.vec)
                          x.vec
                      })
-    x.mat
-
-    #
-    # Columns (portfolio weights) should sum to 1.
-    #
-    colSums(x.mat)
+    rownames(x.mat) <- asset.names
 
     #
     # t(x.mat) %*% mu.vec 
@@ -121,12 +116,17 @@
                          function(x.vec) { sqrt(t(x.vec) %*% Sigma.mat %*% x.vec) })
 
 
+    rbind(x.mat, 
+          sum=colSums(x.mat),   # Columns (portfolio weights) should sum to 1.
+          mu=t(mu.p.vec)[1,],
+          sigma=sigma.p.vec)
+
+
     #
     # Plot the random portfolios
     # 
     plot(x=sigma.p.vec,
          y=mu.p.vec,
-         # type="b", 
          pch=16, 
          main="Mean-Variance Plot",
          col="red",
@@ -341,7 +341,7 @@ And now plot the efficient frontier:
 ```
 
 <br /><br />
-## Lesson 1.3 Sharpe Optimal Portfolio and the Risk-Free Frontier
+## <a name="Lesson-1.3-Sharpe-Optimal-Portfolio-and-the-Risk-Free-Frontier"></a>Lesson 1.3 Sharpe Optimal Portfolio and the Risk-Free Frontier
 
 ### Sharpe Optimal Portfolio (aka Tangency Portfolio)
 
@@ -399,6 +399,7 @@ And now plot the efficient frontier:
            col="red")
 
 ```
+
 
 
 
