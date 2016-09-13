@@ -1,11 +1,20 @@
 
 # Coursera: Financial Engineering II: In-class Exercises in R
 
+* [R code](#R-code)
 * [Lesson 1.1: Mean Variance Overview](#Lesson-1.1--Mean-Variance-Overview)
 * [Lesson 1.3 Sharpe Optimal Portfolio and the Risk-Free Frontier](#Lesson-1.3-Sharpe-Optimal-Portfolio-and-the-Risk-Free-Frontier)
 
 
+<br /><br />
+## <a name="R-code"></a>R code
+
+[fin-eng-2.R](fin-eng-2.R)
+
+
 ```r
+    source("fin-eng-2.R")
+
     options(width=100)
 ```
 
@@ -327,8 +336,6 @@ And now plot the efficient frontier:
 
 
 ```r
-    source("fin-eng-2.R")
-
     #
     # Global minimum variance portfolio: portfolio that has
     # the minimum variance (risk).
@@ -470,6 +477,7 @@ And now plot the efficient frontier:
 ```
 
 ![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8-1.png)
+
 
 
 
