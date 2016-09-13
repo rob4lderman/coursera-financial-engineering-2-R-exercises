@@ -1,7 +1,7 @@
 
 # Coursera: Financial Engineering II: In-class Exercises in R
 
-* [Lesson 1.1: Mean Variance Overview](#Lesson-1.1:-Mean-Variance-Overview)
+* [Lesson 1.1: Mean Variance Overview](#Lesson-1.1--Mean-Variance-Overview)
 * [Lesson 1.3 Sharpe Optimal Portfolio and the Risk-Free Frontier](#Lesson-1.3-Sharpe-Optimal-Portfolio-and-the-Risk-Free-Frontier)
 
 
@@ -10,7 +10,7 @@
 ```
 
 <br /><br />
-## <a name="Lesson-1.1:-Mean-Variance-Overview"></a>Lesson 1.1: Mean Variance Overview
+## <a name="Lesson-1.1--Mean-Variance-Overview"></a>Lesson 1.1: Mean Variance Overview
 
 
 
@@ -470,6 +470,7 @@ And now plot the efficient frontier:
 ```
 
 ![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8-1.png)
+
 
 
 
