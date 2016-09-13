@@ -1,0 +1,404 @@
+
+# Coursera: Financial Engineering II: In-class Exercises in R
+
+```{r}
+
+    options(width=100)
+
+```
+
+<br /><br />
+## Lesson 1.1: Mean Variance Overview
+
+
+```{r}
+   
+
+    asset.names <- c("US Bonds",
+                     "Int’l Bonds",
+                     "US Large Growth",
+                     "US Large Value",
+                     "US Small Growth",
+                     "US Small Value",
+                     "Int’l Dev. Equity",
+                     "Int’l Emerg. Equity" )
+
+    mu.vec <- c( 3.1500000,
+                 1.75000000,
+                 -6.39000000,
+                 -2.86000000,
+                 -6.75000000,
+                 -0.54000000,
+                 -6.75000000,
+                 -5.26000000 ) / 100
+
+    names(mu.vec) <- asset.names
+    d <- length(asset.names)            # number of assets
+
+    #
+    # covariance matrix 
+    #
+    Sigma.mat <- matrix(c(0.0010050, 0.00132800, -0.00057900, -0.00067500, 0.00012100, 0.00012800, -0.00044500, -0.00043700,
+                          0.0013280, 0.00727700, -0.00130700, -0.00061000, -0.00223700, -0.00098900, 0.00144200, -0.00153500,
+                          -0.0005790, -0.00130700, 0.05985200, 0.02758800, 0.06349700, 0.02303600, 0.03296700, 0.04803900,
+                          -0.0006750, -0.00061000, 0.02758800, 0.02960900, 0.02657200, 0.02146500, 0.02069700, 0.02985400,
+                          0.0001210, -0.00223700, 0.06349700, 0.02657200, 0.10248800, 0.04274400, 0.03994300, 0.06599400,
+                          0.0001280, -0.00098900, 0.02303600, 0.02146500, 0.04274400, 0.03205600, 0.01988100, 0.03223500,
+                          -0.0004450, 0.00144200, 0.03296700, 0.02069700, 0.03994300, 0.01988100, 0.02835500, 0.03506400,
+                          -0.0004370, -0.00153500, 0.04803900, 0.02985400, 0.06599400, 0.03223500, 0.03506400, 0.07995800),
+                        nrow=d,
+                        ncol=d,
+                        byrow=T)
+    rownames(Sigma.mat) <- asset.names
+    colnames(Sigma.mat) <- asset.names
+
+```
+
+### Computing mean return and variance of return for random portfolio
+
+```{r}
+
+    #
+    # randomly assigned weights (from excel worksheet)
+    #
+    x.vec <- c(0.794, 1.424, -1.44, 0.892, 1.03, -0.95, 0.95, -1.70)
+    names(x.vec) <- asset.names
+
+    #
+    # weights should sum to 1
+    #
+    sum(x.vec)
+
+    #
+    # Portfolio mean and variance
+    # Note: slightly different than in-class example due to precision
+    #
+    mu.p <- t(x.vec) %*% mu.vec
+    mu.p
+
+    sigma.p <- sqrt( t(x.vec) %*% Sigma.mat %*% x.vec )
+    sigma.p
+
+```
+
+### Generate mean-variance plot for random portfolios
+
+```{r}
+
+    #
+    # Generate a bunch of random portfolios and plot them.
+    # Each column of x.mat is a random set of portfolio weights.
+    # 
+    set.seed(1234)
+    k <- 20
+    x.mat <- sapply( 1:k, 
+                     function(c) {
+                         x.vec <- c( runif(d-1,-2,2), 0)
+                         x.vec[d] <- 1 - sum(x.vec)
+                         x.vec
+                     })
+    x.mat
+
+    #
+    # Columns (portfolio weights) should sum to 1.
+    #
+    colSums(x.mat)
+
+    #
+    # t(x.mat) %*% mu.vec 
+    #   
+    # returns a vector where each entry is the mean return
+    # for the portfolio with the corresponding weights in x.mat
+    #
+    mu.p.vec <- t(x.mat) %*% mu.vec
+
+    #
+    # Loop thru x.mat and compute the variance for each col-vector
+    # of portfolio weights.
+    #
+    sigma.p.vec <- apply(x.mat,
+                         2,
+                         function(x.vec) { sqrt(t(x.vec) %*% Sigma.mat %*% x.vec) })
+
+
+    #
+    # Plot the random portfolios
+    # 
+    plot(x=sigma.p.vec,
+         y=mu.p.vec,
+         # type="b", 
+         pch=16, 
+         main="Mean-Variance Plot",
+         col="red",
+         ylim=c(min(mu.p.vec)*2, max(mu.p.vec)*2),
+         xlim=c(0, max(sigma.p.vec)*1.5), 
+         xlab=expression(sigma[p]), 
+         ylab=expression(mu[p]))
+    abline(h=0)
+
+```
+
+### Use optimization (solver) to compute efficient frontier
+
+
+```{r optim,cache=T,warning=F}
+
+    library(Rsolnp)
+
+    #
+    # ----- solnp: Parameters
+    #
+    #     pars: The starting parameter vector.
+    # 
+    #      fun: The main function which takes as first argument the parameter
+    #           vector and returns a single value.
+    # 
+    #    eqfun: (Optional) The equality constraint function returning the
+    #           vector of evaluated equality constraints.
+    # 
+    #      eqB: (Optional) The equality constraints.
+    # 
+    #  ineqfun: (Optional) The inequality constraint function returning the
+    #           vector of evaluated inequality constraints.
+    # 
+    #   ineqLB: (Optional) The lower bound of the inequality constraints.
+    # 
+    #   ineqUB: (Optional) The upper bound of the inequality constraints.
+    # 
+    #       LB: (Optional) The lower bound on the parameters.
+    # 
+    #       UB: (Optional) The upper bound on the parameters.
+    # 
+    #
+    # -----  Return Value: List containing the following values:
+    #
+    #     pars: Optimal Parameters.
+    # 
+    # convergence : Indicates whether the solver has converged (0) or not (1
+    #           or 2).
+    # 
+    #   values: Vector of function values during optimization with last one
+    #           the value at the optimal.
+    # 
+    # lagrange: The vector of Lagrange multipliers.
+    # 
+    #  hessian: The Hessian of the augmented problem at the optimal solution.
+    # 
+    #   ineqx0: The estimated optimal inequality vector of slack variables
+    #           used for transforming the inequality into an equality
+    #           constraint.
+    # 
+    # nfuneval: The number of function evaluations.
+    # 
+    #  elapsed: Time taken to compute solution.
+    #
+
+    #
+    # Use solnp to compute the efficient portfolio for every sigma.p
+    # for the random portfolios we generated above
+    #
+    optimizationFn <- function(i) {
+        # x.vec <- x.mat[,i]
+        x.vec <- rep(1/d,d)
+        sigma.p <- sigma.p.vec[i]
+
+        sol <- solnp( pars=x.vec,
+                      fun=function(x.vec) { -1 * t(x.vec) %*% mu.vec },     # (-1) because solnp minimizes this function
+                      eqfun=function(x.vec) { sum(x.vec) },
+                      eqB=c(1),
+                      ineqfun=function(x.vec) { sqrt( t(x.vec) %*% Sigma.mat %*% x.vec ) },
+                      ineqUB=sigma.p,
+                      ineqLB=sigma.p-0.001,
+                      control=list(trace=0))
+        # warnings()
+
+        x.eff.vec <- sol$pars
+        mu.eff <- t(x.eff.vec) %*% mu.vec
+        sigma.eff <- sqrt( t(x.eff.vec) %*% Sigma.mat %*% x.eff.vec )
+        list(mu=mu.eff, sigma=sigma.eff, sol=sol)
+    }
+
+    mu.eff.p.vec <- rep(0,k)
+    sigma.eff.p.vec <- rep(0,k)
+
+    # for some reason sapply hangs
+    # sapply( 1:k, optimizationFn)      
+    for (i in 1:k) {
+
+        l <- optimizationFn(i)
+        mu.eff.p.vec[i] <- l$mu
+        sigma.eff.p.vec[i] <- l$sigma
+    }
+
+```
+
+And now plot the efficient frontier:
+
+```{r}
+
+    #
+    # why the fltr?  cuz sometimes solnp doesn't converge, which
+    # ends up producing wild results.  Just ignore those.
+    #
+    fltr <- abs( sigma.eff.p.vec - sigma.p.vec ) < 0.01
+    mu.eff.p.vec <- mu.eff.p.vec[fltr]
+    sigma.eff.p.vec <- sigma.eff.p.vec[fltr]
+
+    #
+    # Plot the random portfolios
+    # 
+    plot(x=sigma.p.vec,
+         y=mu.p.vec,
+         pch=16, 
+         main="Efficient Frontier",
+         col="red",
+         ylim=c(min(mu.p.vec)*2, max(mu.eff.p.vec)*1.25),
+         xlim=c(0, max(sigma.p.vec)*1.5), 
+         xlab=expression(sigma[p]), 
+         ylab=expression(mu[p]))
+    abline(h=0)
+
+    #
+    # Now plot the efficient frontier
+    #
+    points(x=sigma.eff.p.vec,
+           y=mu.eff.p.vec,
+           pch=16,
+           col="blue")
+
+        
+```
+
+
+### Solve for efficient frontier analytically 
+
+```{r}
+
+    source("fin-eng-2.R")
+
+    #
+    # Global minimum variance portfolio: portfolio that has
+    # the minimum variance (risk).
+    #
+    gmv.weights.vec <- meanVarGetMinVarPortfolio( mu.vec, Sigma.mat )
+
+    #
+    # Need a 2nd portfolio along the efficient frontier.
+    # The two-fund theorem tells us that every efficient portfolio is a linear
+    # combination of any two other efficient portfolios.
+    #
+    eff.weights.vec <- meanVarGetEfficientPortfolio( mu.vec, Sigma.mat, target.return=max(mu.eff.p.vec) )
+
+    #
+    # Use the two efficient portfolios to build the efficient frontier
+    #
+    eff.weights.mat <- meanVarBuildEfficientFrontier(mu.vec, 
+                                                     Sigma.mat, 
+                                                     alpha.vec=seq(from=-1,to=2,by=0.1), 
+                                                     gmv.portfolio.weights=gmv.weights.vec, 
+                                                     eff.portfolio.weights=eff.weights.vec) 
+
+    eff.frontier.means <- apply(eff.weights.mat,
+                                2,
+                                function(x.vec) { t(x.vec) %*% mu.vec })
+
+    eff.frontier.sigmas <- apply(eff.weights.mat,
+                                 2,
+                                 function(x.vec) { sqrt(t(x.vec) %*% Sigma.mat %*% x.vec) })
+
+    #
+    # Plot the random portfolios
+    # 
+    plot(x=sigma.p.vec,
+         y=mu.p.vec,
+         pch=16, 
+         main="Efficient Frontier",
+         col="red",
+         ylim=c(min(mu.p.vec)*2, max(mu.eff.p.vec)*1.25),
+         xlim=c(0, max(sigma.p.vec)*1.5), 
+         xlab=expression(sigma[p]), 
+         ylab=expression(mu[p]))
+    abline(h=0)
+
+    #
+    # Plot the efficient frontier as computed by solver.
+    #
+    points(x=sigma.eff.p.vec,
+           y=mu.eff.p.vec,
+           pch=16,
+           col="blue")
+
+    #
+    # Plot the efficient frontier as computed analytically.
+    #
+    points(x=eff.frontier.sigmas,
+           y=eff.frontier.means,
+           type="b",
+           pch=16,
+           col="green")
+
+
+```
+
+<br /><br />
+## Lesson 1.3 Sharpe Optimal Portfolio and the Risk-Free Frontier
+
+### Sharpe Optimal Portfolio (aka Tangency Portfolio)
+
+```{r}
+
+    rf <- 1.5 / 100
+
+    sharpe.optimal.weights <- meanVarGetTangencyPortfolio( mu.vec = mu.vec,
+                                                           Sigma.mat = Sigma.mat,
+                                                           risk.free.rate = rf )
+
+    sharpe.optimal.port <- calcPortfolioMeanVarReturn( weights.vec = sharpe.optimal.weights,
+                                                       mu.vec = mu.vec,
+                                                       Sigma.mat = Sigma.mat )
+
+    sharpe.optimal.port$sharpe.ratio <- (sharpe.optimal.port$expected.return - rf) / sharpe.optimal.port$stdev.return
+
+    sharpe.optimal.port$weights
+    cbind(sharpe.optimal.port)
+
+```
+
+### Security Market Line
+
+```{r}
+
+    #
+    # Multiply the portfolio weights by the covariances of each asset with all
+    # other assets (the rows of Sigma.mat).  Then divide by the variance of the 
+    # market (where the market portfolio is the sharpe optimal portfolio).
+    #
+    beta.vec <- Sigma.mat %*% sharpe.optimal.port$weights / sharpe.optimal.port$stdev.return^2
+
+    #
+    # Plot the security market line
+    # The security market line is the relationship between beta and market excess returns
+    # 
+    plot(x=beta.vec,
+         y=beta.vec * (sharpe.optimal.port$expected.return - rf),
+         pch=16, 
+         type="b",
+         main="Security Market Line",
+         col="blue",
+         # ylim=c(min(mu.p.vec)*2, max(mu.eff.p.vec)*1.25),
+         # xlim=c(0, max(sigma.p.vec)*1.5), 
+         xlab="beta", 
+         ylab="beta * excess market return")
+
+    #
+    # Now plot the actual excess returns for each asset
+    #
+    points(x=beta.vec,
+           y=mu.vec - rf,
+           pch=16,
+           col="red")
+
+```
+
+
+
